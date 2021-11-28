@@ -1,4 +1,3 @@
-import numpy as np
 import cv2
 import mediapipe as mp
 import time
@@ -7,7 +6,13 @@ from scipy import stats
 import mouse
 from eval import Evaluator
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+LEFTCLICK = 0
+NOCLICK = 1
+MIDDLECLICK = 2
+MOVEMOUSE = 3
+RIGHTCLICK = 4
 
 class hand_detector():
     def __init__(self, mode=False, max_hands=1, detection_confidence=0.5, tracking_confidence=0.5):
@@ -131,7 +136,7 @@ if __name__ == '__main__':
 
     print("System ready!")
 
-    e = Evaluator("./data/best_pre_custom_data")
+    e = Evaluator("./data/model_5_class_88_acc")
     gestures = [-1, -1, -1]
 
     while True:
@@ -156,13 +161,31 @@ if __name__ == '__main__':
             gestures = [gesture_id[0]] + gestures
             gestures = gestures[:-1]
             gesture, count = stats.mode(gestures)
+            gesture = gesture[0]
+            mousePressed = None
             print(gesture, "{:.2f}%".format(confidence*100))
 
             if count >= 2:
-                if gesture in [0, 1] and not mouse.is_pressed():
-                    mouse.press()
-                elif gesture not in [0, 1]:
-                    mouse.release()
+                if gesture == LEFTCLICK:
+                    if mousePressed == None:
+                        print("LEFTCLICK")
+                        mouse.press(button=mouse.LEFT)
+                        mousePressed = mouse.LEFT
+                elif gesture == RIGHTCLICK:
+                    if mousePressed == None:
+                        print("RIGHTCLICK")
+                        mouse.press(button=mouse.RIGHT)
+                        mousePressed = mouse.RIGHT
+                elif gesture == MIDDLECLICK:
+                    if mousePressed == None:
+                        print("MIDDLECLICK")
+                        mouse.press(button=mouse.MIDDLE)
+                        mousePressed = mouse.MIDDLE
+                elif gesture in [NOCLICK, MOVEMOUSE]:
+                    if not mousePressed == None:
+                        print("NOCLICK")
+                        mouse.release(button=mousePressed)
+                        mousePressed = None
 
                 if (move) and (abs(px - cx) > 5 or abs(py - cx) > 5):
                     mouse.move(xSens*(px - cx), ySens*(cy - py),absolute=False)

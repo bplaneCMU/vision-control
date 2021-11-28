@@ -1,5 +1,18 @@
 from model import Net
 import torch
+from functools import wraps
+from time import time
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        print('func:%r args:[%r, %r] took: %2.4f sec' % (f.__name__, args, kw, te-ts))
+        return result
+    return wrap
 
 class Evaluator():
 
@@ -14,6 +27,7 @@ class Evaluator():
     def load_model_parameters(self, model_path):
         self.model.load_state_dict(torch.load(model_path))
 
+    # @timing
     def eval(self, x):
         if type(x) == list:
             x = torch.tensor([x])

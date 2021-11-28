@@ -21,21 +21,19 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.layers = nn.ModuleList()
-        self.front = nn.Linear(42, 512)
+        self.front = nn.Linear(42, 256)
 
         # Normal Hourglass
-        for _ in range(4):
-            self.layers.append(nn.BatchNorm1d(512))
-            self.layers.append(nn.Linear(512, 256))
+        for _ in range(2):
+            self.layers.append(nn.BatchNorm1d(256))
             self.layers.append(nn.Linear(256, 128))
             self.layers.append(nn.Linear(128, 64))
             self.layers.append(nn.Linear(64, 64))
             self.layers.append(nn.Linear(64, 64))
             self.layers.append(nn.Linear(64, 128))
             self.layers.append(nn.Linear(128, 256))
-            self.layers.append(nn.Linear(256, 512))
 
-        self.back = nn.Linear(512, 13)
+        self.back = nn.Linear(256, 5)
 
     def forward(self, x):
         x = F.normalize(x)
@@ -72,7 +70,7 @@ class Landmarks(Dataset):
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
-        return random_rotate(self.data[index, :]), LABEL_TRANSFORM[self.labels.astype(int)[index, 0]]
+        return random_rotate(self.data[index, :]), LABEL_TRANSFORM2[self.labels.astype(int)[index, 0]]
 
 def random_rotate(data):
     angle = np.random.rand(1)[0]*2*PI - PI
@@ -100,6 +98,22 @@ LABEL_TRANSFORM = np.array([
     10, 10,
     11, 11,
     12, 12,
+])
+
+LABEL_TRANSFORM2 = np.array([
+    0, 0, # Left Click
+    1, 1,
+    1, 1,
+    2, 2, # Scroll
+    1, 1,
+    3, 3, # Move Mouse
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    4, 4, # Right Click
+    1, 1,
+    1, 1,
 ])
 
 LM = Landmarks("./data/augmented.csv")
@@ -155,7 +169,8 @@ def train_model(model, criterion, optimizer, num_epochs=25):
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    flag = False
+    trackpath = "./data/loss_{:.2f}.csv".format(time.time())
+    trackfile = open(trackpath, "a")
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -202,6 +217,9 @@ def train_model(model, criterion, optimizer, num_epochs=25):
             print('{} Loss: {:.4f} Acc: {:.4f} [{}/{}]]'.format(
                 phase, epoch_loss, epoch_acc, running_corrects, dataset_sizes[phase]))
 
+            if phase == 'val':
+                trackfile.write("{},{},\n".format(epoch, epoch_acc))
+
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
@@ -236,9 +254,8 @@ if __name__ == "__main__":
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     criterion = nn.CrossEntropyLoss()
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    model = train_model(model, criterion, optimizer, num_epochs=1000)
+    model = train_model(model, criterion, optimizer, num_epochs=50)
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), model_save_path + ".dict")
 
