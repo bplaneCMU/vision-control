@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     timer = time.time()
 
-    while (time.time() - timer < 5):
+    while (time.time() - timer < 10):
         success, img = cap.read()
 
         img = detector.find_hands(img)
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         cv2.waitKey(1)
     
     xSens = 4*1920 / (xMax - xMin)
-    ySens = 8*1080 / (yMax - yMin)
+    ySens = 4*1080 / (yMax - yMin)
     print("Calibration done! Please wait for 3 seconds before system starts")
     print(xSens, ySens)
 
@@ -162,8 +162,11 @@ if __name__ == '__main__':
             py = cy
 
             nx, ny = get_mouse_position(lmList)
-            filter.append([nx, ny])
-            filter = filter[1:]
+            if move:
+                filter.append([nx, ny])
+                filter = filter[1:]
+            else:
+                filter = [[nx, ny]] * 3
 
             cx = sum([filter[i][0] for i in range(len(filter))]) / len(filter)
             cy = sum([filter[i][1] for i in range(len(filter))]) / len(filter)
@@ -220,7 +223,6 @@ if __name__ == '__main__':
                     mouse.move(xSens*(px - cx), ySens*(cy - py),absolute=False)
                 else:
                     move = True
-                    
         else:
             move = False
 
