@@ -8,10 +8,10 @@ from eval import Evaluator
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-LEFTCLICK = 0
+LEFTHOLD = 0
 NOCLICK = 1
 MIDDLECLICK = 2
-MOVEMOUSE = 3
+LEFTCLICK = 3
 RIGHTCLICK = 4
 
 class hand_detector():
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     print("System ready!")
 
-    e = Evaluator("./data/model_5_class_88_acc")
+    e = Evaluator("./data/model_87")
     gestures = [-1, -1, -1]
 
     while True:
@@ -163,28 +163,39 @@ if __name__ == '__main__':
             gesture, count = stats.mode(gestures)
             gesture = gesture[0]
             mousePressed = None
+            resetMiddleClick = True
             print(gesture, "{:.2f}%".format(confidence*100))
 
-            if count >= 2:
+            if count >= 3:
+                if gesture == LEFTHOLD:
+                    if mousePressed == None:
+                        print("LEFTHOLD")
+                        mouse.press(button=mouse.LEFT)
+                        mousePressed = mouse.LEFT
                 if gesture == LEFTCLICK:
                     if mousePressed == None:
                         print("LEFTCLICK")
-                        mouse.press(button=mouse.LEFT)
+                        mouse.click()
                         mousePressed = mouse.LEFT
                 elif gesture == RIGHTCLICK:
                     if mousePressed == None:
                         print("RIGHTCLICK")
                         mouse.press(button=mouse.RIGHT)
                         mousePressed = mouse.RIGHT
+                        resetMiddleClick = False
                 elif gesture == MIDDLECLICK:
-                    if mousePressed == None:
+                    if mousePressed == None and resetMiddleClick:
                         print("MIDDLECLICK")
                         mouse.press(button=mouse.MIDDLE)
                         mousePressed = mouse.MIDDLE
-                elif gesture in [NOCLICK, MOVEMOUSE]:
+                    if mousePressed == mouse.MIDDLE and resetMiddleClick:
+                        mouse.release(button=mouse.MIDDLE)
+                        resetMiddleClick = False
+                elif gesture in [NOCLICK]:
                     if not mousePressed == None:
                         print("NOCLICK")
                         mouse.release(button=mousePressed)
+                        resetMiddleClick = True
                         mousePressed = None
 
                 if (move) and (abs(px - cx) > 5 or abs(py - cx) > 5):

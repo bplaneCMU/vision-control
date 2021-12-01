@@ -24,7 +24,7 @@ class Net(nn.Module):
         self.front = nn.Linear(42, 256)
 
         # Normal Hourglass
-        for _ in range(2):
+        for _ in range(1):
             self.layers.append(nn.BatchNorm1d(256))
             self.layers.append(nn.Linear(256, 128))
             self.layers.append(nn.Linear(128, 64))
@@ -70,19 +70,7 @@ class Landmarks(Dataset):
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
-        return random_rotate(self.data[index, :]), LABEL_TRANSFORM2[self.labels.astype(int)[index, 0]]
-
-def random_rotate(data):
-    angle = np.random.rand(1)[0]*2*PI - PI
-    data = rotate(data, angle, axis=0)
-
-    angle = np.random.rand(1)[0]*PI/2 - PI / 4
-    data = rotate(data, angle, axis=1)
-
-    angle = np.random.rand(1)[0]*PI/2 - PI / 4
-    data = rotate(data, angle, axis=2)
-
-    return data
+        return self.data[index, :], LABEL_TRANSFORM2[self.labels.astype(int)[index, 0]]
 
 LABEL_TRANSFORM = np.array([
     0, 0,
@@ -101,16 +89,16 @@ LABEL_TRANSFORM = np.array([
 ])
 
 LABEL_TRANSFORM2 = np.array([
-    0, 0, # Left Click
+    0, 0, # Left Drag
     1, 1,
     1, 1,
     2, 2, # Scroll
     1, 1,
-    3, 3, # Move Mouse
     1, 1,
     1, 1,
     1, 1,
     1, 1,
+    3, 3, # Left Click
     4, 4, # Right Click
     1, 1,
     1, 1,
@@ -135,33 +123,6 @@ dataset_sizes = {
 """
     Main Functional Script to train and test
 """
-# Axis param, 0 = Z, 1 = Y, 2 = X
-def rotate(lm, theta, axis=0):
-    lm = np.array(lm)
-    result = np.copy(lm)
-    c, s = np.cos(theta), np.sin(theta)
-    R = None
-    if axis == 0:
-        R = np.array([(c, -s, 0), 
-                      (s,  c, 0),
-                      (0,  0, 1)])    
-    if axis == 1:
-        R = np.array([( c, 0, s), 
-                      ( 0, 1, 0),
-                      (-s, 0, c)])   
-    if axis == 2:
-        R = np.array([(1, 0,  0), 
-                      (0, c, -s),
-                      (0, s,  c)])
-
-    if len(lm.shape) == 1:
-        array = np.array([[lm[i], lm[i+1], 0] for i in range(0, len(lm), 2)])
-        return array.dot(R)[:,:-1].flatten()
-    for j in range(lm.shape[0]):
-        array = lm[j].reshape((-1, 2))
-        array = np.concatenate((array, np.zeros_like(array[:,:-1])), axis=1)
-        result[j] = array.dot(R)[:,:-1].flatten()
-    return result
 
 def train_model(model, criterion, optimizer, num_epochs=25):
     since = time.time()
@@ -169,7 +130,7 @@ def train_model(model, criterion, optimizer, num_epochs=25):
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    trackpath = "./data/loss_{:.2f}.csv".format(time.time())
+    trackpath = "./data/acc_5_class_deep.csv".format(time.time())
     trackfile = open(trackpath, "a")
 
     for epoch in range(num_epochs):
