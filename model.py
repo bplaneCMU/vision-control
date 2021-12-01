@@ -13,6 +13,26 @@ from math import pi as PI
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+
+        self.data = torch.tensor(Landmarks("./data/augmented.csv")[0:2][0])
+
+    def forward(self, x):
+        formatted = (F.normalize(x)*250).round().int()
+        x = np.zeros((x.shape[0], 250, 250))
+        x = torch.tensor(x)
+
+        for i in range(x.shape[0]):
+
+            for n in range(0, formatted[i].shape[0], 2):
+                a = formatted[i][n]
+                b = formatted[i][n+1]
+                x[i][a+125,b+125] = 1
+
+        return x
+
 """
     Gesture Classification Network Model
 """

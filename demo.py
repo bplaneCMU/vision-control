@@ -75,6 +75,14 @@ class Right_Hand():
             self.mpDraw.draw_landmarks(img, handLm, self.mpHands.HAND_CONNECTIONS)
         return img
 
+def get_mouse_position(lmlist):
+    x, y = 0, 0
+    for i in [0, 1, 5, 9, 13, 17]:
+        x += lmlist[i][1]
+        y += lmlist[i][2]
+    
+    return x / len(lmlist), y / len(lmlist)
+
 if __name__ == '__main__':
     cTime = 0
     pTime = 0
@@ -103,7 +111,7 @@ if __name__ == '__main__':
 
     timer = time.time()
 
-    while (time.time() - timer < 10):
+    while (time.time() - timer < 5):
         success, img = cap.read()
 
         img = detector.find_hands(img)
@@ -124,14 +132,14 @@ if __name__ == '__main__':
         cv2.imshow("Image", img)
         cv2.waitKey(1)
     
-    xSens = 1920 / (xMax - xMin)
-    ySens = 1080 / (yMax - yMin)
+    xSens = 4*1920 / (xMax - xMin)
+    ySens = 8*1080 / (yMax - yMin)
     print("Calibration done! Please wait for 3 seconds before system starts")
     print(xSens, ySens)
 
     timer = time.time()
 
-    while (time.time() - timer < 3):
+    while (time.time() - timer < 2):
         continue
 
     print("System ready!")
@@ -139,6 +147,10 @@ if __name__ == '__main__':
     e = Evaluator("./data/model_87")
     gestures = [-1, -1, -1]
 
+
+    mousePressed = None
+    resetMiddleClick = True
+    filter = [[0, 0]] * 3
     while True:
         success, img = cap.read()
 
@@ -148,8 +160,13 @@ if __name__ == '__main__':
         if (lmList):            
             px = cx
             py = cy
-            cx = lmList[0][1]
-            cy = lmList[0][2]
+
+            nx, ny = get_mouse_position(lmList)
+            filter.append([nx, ny])
+            filter = filter[1:]
+
+            cx = sum([filter[i][0] for i in range(len(filter))]) / len(filter)
+            cy = sum([filter[i][1] for i in range(len(filter))]) / len(filter)
 
             features = []
             origin = lmList[0]
@@ -162,8 +179,7 @@ if __name__ == '__main__':
             gestures = gestures[:-1]
             gesture, count = stats.mode(gestures)
             gesture = gesture[0]
-            mousePressed = None
-            resetMiddleClick = True
+            
             print(gesture, "{:.2f}%".format(confidence*100))
 
             if count >= 3:
@@ -172,6 +188,8 @@ if __name__ == '__main__':
                         print("LEFTHOLD")
                         mouse.press(button=mouse.LEFT)
                         mousePressed = mouse.LEFT
+                    else:
+                        print("LEFT HELD")
                 if gesture == LEFTCLICK:
                     if mousePressed == None:
                         print("LEFTCLICK")
@@ -198,10 +216,11 @@ if __name__ == '__main__':
                         resetMiddleClick = True
                         mousePressed = None
 
-                if (move) and (abs(px - cx) > 5 or abs(py - cx) > 5):
+                if (move) and (abs(px - cx)**2 + abs(py - cy)**2)**0.5 > 0.05:
                     mouse.move(xSens*(px - cx), ySens*(cy - py),absolute=False)
                 else:
                     move = True
+                    
         else:
             move = False
 
